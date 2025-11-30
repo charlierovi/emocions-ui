@@ -38,7 +38,9 @@
       "last 1 safari version"
     ]
   },
-  "devDependencies": {
-    "yaml": "^2.8.2"
+  "browser": {
+    "fs": false,
+    "path": false,
+    "os": false
   }
 }
