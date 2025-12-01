@@ -2,6 +2,8 @@
 import React, { useRef, useState, useEffect } from "react";
 import Webcam from "react-webcam";
 
+const faceapi = window.faceapi;
+
 // Traduccions de les expressions 
 const expressionTranslations = {
   neutral: "Neutral",
