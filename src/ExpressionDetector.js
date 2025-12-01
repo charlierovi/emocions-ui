@@ -1,6 +1,5 @@
 // src/ExpressionDetector.js
 import React, { useRef, useState, useEffect } from "react";
-import * as faceapi from "face-api.js";
 import Webcam from "react-webcam";
 
 // Traduccions de les expressions 
