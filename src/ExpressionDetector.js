@@ -4,8 +4,6 @@
 import React, { useRef, useState, useEffect } from "react";
 import Webcam from "react-webcam";
 
-const faceapi = window.faceapi;
-
 // Traduccions de les expressions 
 const expressionTranslations = {
   neutral: "Neutral",
@@ -132,7 +130,7 @@ const ExpressionDetector = () => {
         transition: "background-color 0.5s ease",
       }}
     >
-      <h1>Detector d'Expressions Facials</h1>
+      <h1>Detector d&apos;Expressions Facials</h1>
       <p>
         Estat d&apos;ànim detectat: <strong>{detectedExpression}</strong>
       </p>
