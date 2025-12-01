@@ -1,4 +1,6 @@
 // src/ExpressionDetector.js
+/* global faceapi */
+
 import React, { useRef, useState, useEffect } from "react";
 import Webcam from "react-webcam";
 
@@ -32,7 +34,7 @@ const ExpressionDetector = () => {
 
   const [modelsLoaded, setModelsLoaded] = useState(false);
   const [detectedExpression, setDetectedExpression] = useState("Cap");
-  const [bgColor, setBgColor] = useState("#ffffff"); // 👈 color de fondo
+  const [bgColor, setBgColor] = useState("#ffffff");
 
   useEffect(() => {
     const loadModels = async () => {
@@ -49,78 +51,72 @@ const ExpressionDetector = () => {
     };
 
     loadModels();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const startDetection = () => {
-  setInterval(async () => {
-    // 1️⃣ Comprobar que tenemos refs y vídeo
-    if (
-      !webcamRef.current ||
-      !webcamRef.current.video ||
-      webcamRef.current.video.readyState !== 4 // 4 = HAVE_ENOUGH_DATA
-    ) {
-      // Vídeo aún no listo → salimos y en el siguiente intervalo lo intentamos otra vez
-      return;
-    }
+    setInterval(async () => {
+      if (
+        !webcamRef.current ||
+        !webcamRef.current.video ||
+        webcamRef.current.video.readyState !== 4
+      ) {
+        return;
+      }
 
-    const video = webcamRef.current.video;
+      const video = webcamRef.current.video;
+      const videoWidth = video.videoWidth;
+      const videoHeight = video.videoHeight;
 
-    // 2️⃣ Comprobar que el vídeo tiene ancho y alto válidos
-    const videoWidth = video.videoWidth;
-    const videoHeight = video.videoHeight;
+      if (!videoWidth || !videoHeight) return;
 
-    if (!videoWidth || !videoHeight) {
-      // Si aún son 0 o undefined, no hacemos nada en este tick
-      return;
-    }
+      video.width = videoWidth;
+      video.height = videoHeight;
 
-    video.width = videoWidth;
-    video.height = videoHeight;
+      if (!canvasRef.current) return;
+      const canvas = canvasRef.current;
 
-    if (!canvasRef.current) return;
-    const canvas = canvasRef.current;
+      canvas.width = videoWidth;
+      canvas.height = videoHeight;
 
-    canvas.width = videoWidth;
-    canvas.height = videoHeight;
+      const detections = await faceapi
+        .detectAllFaces(
+          video,
+          new faceapi.TinyFaceDetectorOptions({
+            inputSize: 224,
+            scoreThreshold: 0.5,
+          })
+        )
+        .withFaceLandmarks()
+        .withFaceExpressions();
 
-    const detections = await faceapi
-      .detectAllFaces(
-        video,
-        new faceapi.TinyFaceDetectorOptions({
-          inputSize: 224,
-          scoreThreshold: 0.5,
-        })
-      )
-      .withFaceLandmarks()
-      .withFaceExpressions();
+      const displaySize = { width: videoWidth, height: videoHeight };
+      faceapi.matchDimensions(canvas, displaySize);
 
-    const displaySize = { width: videoWidth, height: videoHeight };
-    faceapi.matchDimensions(canvas, displaySize);
+      const resizedDetections = faceapi.resizeResults(detections, displaySize);
 
-    const resizedDetections = faceapi.resizeResults(detections, displaySize);
+      const context = canvas.getContext("2d");
+      context.clearRect(0, 0, canvas.width, canvas.height);
 
-    const context = canvas.getContext("2d");
-    context.clearRect(0, 0, canvas.width, canvas.height);
+      if (detections.length > 0) {
+        faceapi.draw.drawDetections(canvas, resizedDetections);
+        faceapi.draw.drawFaceExpressions(canvas, resizedDetections);
+        faceapi.draw.drawFaceLandmarks(canvas, resizedDetections);
 
-    if (detections.length > 0) {
-      faceapi.draw.drawDetections(canvas, resizedDetections);
-      faceapi.draw.drawFaceExpressions(canvas, resizedDetections);
-      faceapi.draw.drawFaceLandmarks(canvas, resizedDetections);
+        const expressions = detections[0].expressions;
+        const dominantExpression = Object.keys(expressions).reduce((a, b) =>
+          expressions[a] > expressions[b] ? a : b
+        );
 
-      const expressions = detections[0].expressions;
-      const dominantExpression = Object.keys(expressions).reduce((a, b) =>
-        expressions[a] > expressions[b] ? a : b
-      );
+        setDetectedExpression(
+          expressionTranslations[dominantExpression] || dominantExpression
+        );
 
-      setDetectedExpression(
-        expressionTranslations[dominantExpression] || dominantExpression
-      );
-
-      const newColor = expressionColors[dominantExpression] || "#ffffff";
-      setBgColor(newColor);
-    }
-  }, 500);
-};
+        const newColor = expressionColors[dominantExpression] || "#ffffff";
+        setBgColor(newColor);
+      }
+    }, 500);
+  };
 
   return (
     <div
@@ -130,22 +126,20 @@ const ExpressionDetector = () => {
         alignItems: "center",
         justifyContent: "center",
         minHeight: "100vh",
-        backgroundColor: bgColor, 
+        backgroundColor: bgColor,
         transition: "background-color 0.5s ease",
       }}
     >
       <h1>Detector d'Expressions Facials</h1>
       <p>
-        Estat d&apos;ànim detectat:{" "}
-        <strong>{detectedExpression}</strong>
+        Estat d&apos;ànim detectat: <strong>{detectedExpression}</strong>
       </p>
 
       {!modelsLoaded ? (
-        <p>Carregant models d'IA, si us plau, espereu...</p>
-        ) : (
-        <p>Models Carregats!</p>
-        )}
-
+        <p>Carregant models d&apos;IA, si us plau, espereu...</p>
+      ) : (
+        <p>Models carregats!</p>
+      )}
 
       <div style={{ position: "relative" }}>
         <Webcam
